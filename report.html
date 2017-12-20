@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>report</title>
+<script
+	src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<link type="text/css" rel="stylesheet"
+	href="https://cdnjs.cloudflare.com/ajax/libs/jsgrid/1.5.3/jsgrid.min.css" />
+<link type="text/css" rel="stylesheet"
+	href="https://cdnjs.cloudflare.com/ajax/libs/jsgrid/1.5.3/jsgrid-theme.min.css" />
+<script type="text/javascript"
+	src="https://cdnjs.cloudflare.com/ajax/libs/jsgrid/1.5.3/jsgrid.min.js"></script>
+<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+<link rel="stylesheet"
+	href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+<script type="text/javascript" src="report.js"></script>
+<style>
+.row {
+	width: 100%;
+	margin: 0 auto;
+}
+
+.block {
+	width: 220px;
+	float: left;
+}
+
+.total-row {
+	font-weight: bold;
+	background: #f5f5f5;
+}
+
+.total-row td {
+	border-top: 2px solid #efefef;
+}
+</style>
+</head>
+<body>
+	<div class="row">
+		<div class="block">
+			<fieldset style="width: 100px">
+				<legend>Start date</legend>
+				<input type="text" id=startdt>
+			</fieldset>
+		</div>
+		<div class="block">
+			<fieldset style="width: 100px">
+				<legend>End date</legend>
+				<input type="text" id=enddt>
+			</fieldset>
+		</div>
+		<div class="block">
+			<fieldset style="width: 100px">
+				<legend>Programer</legend>
+				<input list="Programer" name="Programer" id="Programerinput">
+				<datalist id="Programer"></datalist>
+			</fieldset>
+		</div>
+		<div class="block">
+			<fieldset style="width: 100px">
+				<legend>Projekt</legend>
+				<input list="Projekt" name="Projekt" id="Projektinput">
+				<datalist id="Projekt"></datalist>
+			</fieldset>
+		</div>
+		<div class="block">
+
+			<fieldset style="width: 50px">
+				<legend>Report</legend>
+				<input id="Report" type="button" value="Report"></input>
+			</fieldset>
+		</div>
+		<div class="block">
+
+			<fieldset style="width: 50px">
+				<legend>Export</legend>
+				<input id="Export" type="button" value="Export"></input>
+			</fieldset>
+		</div>
+	</div>
+
+	<div id="jsGrid"></div>
+	<script>
+		$("#jsGrid").jsGrid({
+			 onItemUpdated: function (item) {
+		            $("#jsGrid").jsGrid("refresh")
+		        },
+			 onRefreshed: function(args) {
+		        	var items = args.grid.option("data");
+		          var total = {  "Sati": 0, IsTotal: true };
+		          
+		          items.forEach(function(item) {
+		        	  total.Sati += isNaN(item.Sati)?0:item.Sati;
+		          }); 
+
+		          total.Sati ='Total: '+total.Sati+' sati';
+		          
+		          var $totalRow = $("<tr>").addClass("total-row");
+		          
+		          args.grid._renderCells($totalRow, total);
+		          
+		          args.grid._content.prepend($totalRow);
+		        },
+		        
+			controller: {
+	            loadData: function(filter) {
+	              return $.ajax({
+	                url: "report.php?action=report",
+	                dataType: "json",
+			data:{filter}
+	              });
+	            }}
+	          ,
+	          width: "100%",
+
+			inserting : false,
+			editing : false,
+			sorting : true,
+			paging : false,
+
+			fields : [ {
+				name : "Programer",
+				type : "text",
+				width : 150,
+				validate : "required"
+			}, {
+				name : "Task",
+				type : "text",
+			}, {
+				name : "Opis",
+				type : "text",
+			}, {
+				name : "Sati",
+				type : "number",
+			}, {
+				name : "Datum",
+				type : "text",
+			}, {
+				name : "Projekt",
+				type : "text"
+			} ]
+		});
+
+		$(function() {
+			$("#startdt").datepicker({
+				showWeek : true,
+				dateFormat: "dd.mm.yy" 
+			});
+			$("#enddt").datepicker({
+				showWeek : true,
+				dateFormat: "dd.mm.yy" 
+			});
+
+		});
+
+		$.getJSON("report.php", {
+			action : "programmer"
+		}, function(result) {
+			var options = $("#Programer");
+			//don't forget error handling!
+			$.each(result, function(idx, programer) {
+				options.append($("<option />").val(programer.key).text(
+						programer.Programer));
+			});
+		});
+
+		$.getJSON("report.php", {
+			action : "project"
+		}, function(result) {
+			var options = $("#Projekt");
+			//don't forget error handling!
+			$.each(result, function(idx, project) {
+				options.append($("<option />").val(project.key).text(
+						project.Project));
+			});
+		});
+
+		$(document).on("click", "#Report", function() {
+			$("#jsGrid").jsGrid("loadData",{"startdt":$("#startdt").val()
+				,"enddt":$("#enddt").val()
+				,"programer":$("#Programerinput").val()
+				,"projekt":$("#Projektinput").val()
+				});
+		});
+
+		$(function () {
+		       $("#Export").click(function () {
+		           var data = $('#jsGrid').jsGrid('option', 'data');
+		           JSONToCSVConvertor(data, "Report", true);
+		       })
+		   });
+		   
+	</script>
+</body>
+</html>
